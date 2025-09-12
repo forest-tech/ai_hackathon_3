@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>音声生成サンプル</title>
+</head>
+<body>
+  <h1>音声生成サンプル</h1>
+  <label>周波数(Hz): <input id="freq" type="number" value="440"></label>
+  <button id="play">音を生成して再生</button>
+  
+  <script>
+    const playBtn = document.getElementById("play");
+    const freqInput = document.getElementById("freq");
+
+    playBtn.addEventListener("click", async () => {
+      const freq = freqInput.value;
+      const response = await fetch(`/generate?freq=${freq}`);
+      const arrayBuffer = await response.arrayBuffer();
+
+      // Web Audio API で再生
+      const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      const buffer = await audioCtx.decodeAudioData(arrayBuffer);
+      const source = audioCtx.createBufferSource();
+      source.buffer = buffer;
+      source.connect(audioCtx.destination);
+      source.start();
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,451 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>GUI Sample App — ToDo + Notes</title>
+  <style>
+    :root {
+      --bg: #f6f7fb;
+      --panel: #ffffff;
+      --text: #0f172a;
+      --muted: #64748b;
+      --primary: #4f46e5;
+      --border: #e5e7eb;
+      --shadow: 0 10px 30px rgba(2, 6, 23, 0.08);
+    }
+    .dark {
+      --bg: #0b1020;
+      --panel: #11162a;
+      --text: #e5e7eb;
+      --muted: #94a3b8;
+      --primary: #8b5cf6;
+      --border: #1f2937;
+      --shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+    }
+
+    * { box-sizing: border-box; }
+    html, body { height: 100%; }
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+    }
+
+    .app {
+      display: grid;
+      grid-template-rows: 64px 1fr;
+      height: 100vh;
+    }
+
+    /* Top bar */
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 16px;
+      border-bottom: 1px solid var(--border);
+      background: var(--panel);
+      box-shadow: var(--shadow);
+      z-index: 10;
+    }
+    .title {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      font-weight: 700;
+      letter-spacing: 0.2px;
+    }
+    .title .logo {
+      width: 28px; height: 28px;
+      display: grid; place-items: center;
+      border-radius: 8px;
+      background: linear-gradient(135deg, var(--primary), #06b6d4);
+      color: white; font-weight: 800;
+      box-shadow: var(--shadow);
+    }
+    .toolbar { display: flex; gap: 8px; align-items: center; }
+    .btn {
+      border: 1px solid var(--border);
+      background: var(--panel);
+      color: var(--text);
+      padding: 8px 12px;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: transform .05s ease, background .2s ease, border-color .2s ease;
+    }
+    .btn:hover { background: rgba(127,127,127,.06); }
+    .btn:active { transform: translateY(1px); }
+    .btn.primary { background: var(--primary); color: white; border-color: transparent; }
+
+    /* Layout */
+    .main {
+      display: grid;
+      grid-template-columns: 260px 1fr;
+      gap: 16px;
+      padding: 16px;
+      max-width: 1200px;
+      margin: 0 auto; width: 100%;
+    }
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      box-shadow: var(--shadow);
+    }
+
+    /* Sidebar */
+    .sidebar { padding: 16px; }
+    .tabs { display: grid; gap: 8px; }
+    .tab-btn {
+      padding: 10px 12px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: transparent;
+      text-align: left;
+      cursor: pointer;
+    }
+    .tab-btn.active { background: rgba(79, 70, 229, 0.08); border-color: rgba(79,70,229,.35); }
+
+    /* Content */
+    .content { padding: 16px; display: grid; gap: 16px; }
+
+    .card { padding: 16px; border: 1px dashed var(--border); border-radius: 14px; }
+    .section-title { margin: 0 0 8px; font-size: 14px; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; }
+
+    /* ToDo styles */
+    .todo-inputs { display: grid; grid-template-columns: 1fr 140px; gap: 10px; }
+    .input, .select {
+      width: 100%; padding: 10px 12px; border-radius: 12px; border: 1px solid var(--border); background: transparent; color: var(--text);
+    }
+    .todo-list { display: grid; gap: 10px; }
+    .todo-item {
+      display: grid; grid-template-columns: 28px 1fr auto; gap: 10px; align-items: center;
+      padding: 10px 12px; border: 1px solid var(--border); border-radius: 12px;
+    }
+    .todo-title { font-weight: 600; }
+    .todo-meta { font-size: 12px; color: var(--muted); }
+    .chip { font-size: 12px; padding: 2px 8px; border-radius: 999px; border: 1px solid var(--border); }
+    .todo-actions { display: flex; gap: 6px; }
+
+    /* Notes */
+    .notes {
+      width: 100%; min-height: 220px; resize: vertical; padding: 12px; border-radius: 12px; border: 1px solid var(--border); background: transparent; color: var(--text);
+    }
+
+    /* Footer hint */
+    .hint { font-size: 12px; color: var(--muted); }
+
+    /* Modal */
+    dialog {
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 0;
+      max-width: 520px; width: 90vw;
+      box-shadow: var(--shadow);
+      background: var(--panel);
+      color: var(--text);
+    }
+    .modal-head { padding: 16px; border-bottom: 1px solid var(--border); font-weight: 700; }
+    .modal-body { padding: 16px; }
+    .modal-foot { display: flex; justify-content: flex-end; gap: 8px; padding: 12px 16px; border-top: 1px solid var(--border); }
+
+    @media (max-width: 860px) {
+      .main { grid-template-columns: 1fr; }
+      .sidebar { order: 2; }
+      .content { order: 1; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header class="topbar">
+      <div class="title">
+        <div class="logo">G</div>
+        <div>GUI Sample App</div>
+      </div>
+      <div class="toolbar">
+        <button id="btn-help" class="btn">ヘルプ</button>
+        <button id="btn-theme" class="btn">🌙 テーマ切替</button>
+        <button id="btn-export" class="btn primary">💾 データ書き出し</button>
+      </div>
+    </header>
+
+    <div class="main">
+      <aside class="sidebar panel">
+        <h3 style="margin: 8px 0 12px">メニュー</h3>
+        <div class="tabs">
+          <button class="tab-btn active" data-tab="todo">🗂️ タスク</button>
+          <button class="tab-btn" data-tab="notes">📝 ノート</button>
+          <button class="tab-btn" data-tab="about">ℹ️ このアプリ</button>
+        </div>
+      </aside>
+
+      <section class="content panel">
+        <!-- ToDo tab -->
+        <div class="tab" id="tab-todo">
+          <div class="card">
+            <p class="section-title">新規タスク</p>
+            <div class="todo-inputs">
+              <input id="todo-title" class="input" placeholder="例: レポート提出" />
+              <select id="todo-priority" class="select">
+                <option value="low">低</option>
+                <option value="mid" selected>中</option>
+                <option value="high">高</option>
+              </select>
+            </div>
+            <div style="margin-top: 10px; display: flex; gap: 10px">
+              <input id="todo-due" type="date" class="input" style="max-width: 220px" />
+              <button id="btn-add" class="btn primary">追加</button>
+            </div>
+            <p class="hint" style="margin-top: 6px">Enter で追加、⌘/Ctrl+K で検索フィルタ</p>
+          </div>
+
+          <div class="card" style="display:flex; gap:10px; align-items:center">
+            <input id="search" class="input" placeholder="タスクを検索…" />
+            <select id="filter" class="select" style="max-width: 220px">
+              <option value="all" selected>すべて</option>
+              <option value="open">未完了</option>
+              <option value="done">完了</option>
+            </select>
+          </div>
+
+          <div class="todo-list" id="todo-list"></div>
+        </div>
+
+        <!-- Notes tab -->
+        <div class="tab" id="tab-notes" hidden>
+          <div class="card">
+            <p class="section-title">ノート（自動保存）</p>
+            <textarea id="notes" class="notes" placeholder="ここにメモを書いてください"></textarea>
+            <p class="hint" id="notes-status">未保存</p>
+          </div>
+        </div>
+
+        <!-- About tab -->
+        <div class="tab" id="tab-about" hidden>
+          <div class="card">
+            <h3>このサンプルについて</h3>
+            <ul>
+              <li>HTML/CSS/JS のみで構成（フレームワーク不要）</li>
+              <li>ローカルストレージに ToDo とノートを保存</li>
+              <li>ライト/ダーク テーマ切替</li>
+              <li>モーダルダイアログ、タブ、検索/フィルタ等のUI例</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <!-- Help Modal -->
+  <dialog id="modal-help">
+    <div class="modal-head">ヘルプ</div>
+    <div class="modal-body">
+      <p>キーボードショートカット：</p>
+      <ul>
+        <li><strong>Enter</strong> — タスク追加</li>
+        <li><strong>⌘/Ctrl + K</strong> — 検索ボックスへフォーカス</li>
+        <li><strong>⌘/Ctrl + Shift + E</strong> — データ書き出し</li>
+        <li><strong>⌘/Ctrl + D</strong> — テーマ切替</li>
+      </ul>
+      <p style="margin-top:10px" class="hint">ブラウザのローカルストレージのみを使用します（ネットワーク送信なし）。</p>
+    </div>
+    <div class="modal-foot">
+      <button class="btn" value="cancel">閉じる</button>
+    </div>
+  </dialog>
+
+  <script>
+    // ===== Utilities =====
+    const $ = (s, r=document) => r.querySelector(s);
+    const $$ = (s, r=document) => Array.from(r.querySelectorAll(s));
+    const storage = {
+      get(key, fallback) {
+        try { return JSON.parse(localStorage.getItem(key)) ?? fallback; } catch { return fallback; }
+      },
+      set(key, value) { localStorage.setItem(key, JSON.stringify(value)); }
+    };
+
+    // ===== State =====
+    let todos = storage.get('gui.todos', []);
+    let notesText = storage.get('gui.notes', "");
+    let theme = storage.get('gui.theme', 'light');
+
+    if (theme === 'dark') document.documentElement.classList.add('dark');
+
+    // ===== Elements =====
+    const listEl = $('#todo-list');
+    const titleEl = $('#todo-title');
+    const priorityEl = $('#todo-priority');
+    const dueEl = $('#todo-due');
+    const addBtn = $('#btn-add');
+    const searchEl = $('#search');
+    const filterEl = $('#filter');
+    const notesEl = $('#notes');
+    const notesStatus = $('#notes-status');
+
+    const btnTheme = $('#btn-theme');
+    const btnExport = $('#btn-export');
+    const btnHelp = $('#btn-help');
+    const dlgHelp = $('#modal-help');
+
+    // ===== ToDo Render =====
+    function render() {
+      const q = (searchEl.value || '').toLowerCase();
+      const f = filterEl.value;
+      const items = todos.filter(t => {
+        const hit = t.title.toLowerCase().includes(q);
+        const state = t.done ? 'done' : 'open';
+        return hit && (f === 'all' || f === state);
+      });
+
+      listEl.innerHTML = '';
+      if (items.length === 0) {
+        const empty = document.createElement('div');
+        empty.className = 'card';
+        empty.textContent = 'タスクはありません';
+        listEl.appendChild(empty);
+        return;
+      }
+
+      for (const t of items) listEl.appendChild(renderItem(t));
+    }
+
+    function renderItem(t) {
+      const row = document.createElement('div');
+      row.className = 'todo-item';
+      row.dataset.id = t.id;
+
+      const cb = document.createElement('input');
+      cb.type = 'checkbox';
+      cb.checked = !!t.done;
+
+      const info = document.createElement('div');
+      const title = document.createElement('div');
+      title.className = 'todo-title';
+      title.textContent = t.title;
+      if (t.done) title.style.textDecoration = 'line-through';
+
+      const meta = document.createElement('div');
+      meta.className = 'todo-meta';
+      const due = t.due ? new Date(t.due).toLocaleDateString() : '期限なし';
+      const pr = {low:'低', mid:'中', high:'高'}[t.priority] || t.priority;
+      const chip = document.createElement('span');
+      chip.className = 'chip';
+      chip.textContent = `優先度: ${pr}`;
+      meta.append(`期限: ${due} `, chip);
+
+      info.append(title, meta);
+
+      const actions = document.createElement('div');
+      actions.className = 'todo-actions';
+      const btnEdit = Object.assign(document.createElement('button'), { className: 'btn', textContent: '編集' });
+      const btnDel = Object.assign(document.createElement('button'), { className: 'btn', textContent: '削除' });
+      actions.append(btnEdit, btnDel);
+
+      row.append(cb, info, actions);
+
+      // Events
+      cb.addEventListener('change', () => { t.done = cb.checked; persist(); render(); });
+      btnDel.addEventListener('click', () => { todos = todos.filter(x => x.id !== t.id); persist(); render(); });
+      btnEdit.addEventListener('click', () => editItem(t));
+
+      return row;
+    }
+
+    function editItem(t) {
+      const nv = prompt('タイトルを編集', t.title);
+      if (nv == null) return;
+      t.title = nv.trim() || t.title;
+      persist();
+      render();
+    }
+
+    function addTodo() {
+      const title = (titleEl.value || '').trim();
+      if (!title) return;
+      const todo = {
+        id: crypto.randomUUID(),
+        title,
+        priority: priorityEl.value,
+        due: dueEl.value || null,
+        done: false,
+        createdAt: Date.now()
+      };
+      todos.unshift(todo);
+      titleEl.value = '';
+      persist();
+      render();
+    }
+
+    function persist() {
+      storage.set('gui.todos', todos);
+    }
+
+    // ===== Notes =====
+    notesEl.value = notesText;
+    let notesTimer;
+    notesEl.addEventListener('input', () => {
+      clearTimeout(notesTimer);
+      notesStatus.textContent = '保存中…';
+      notesTimer = setTimeout(() => {
+        notesText = notesEl.value;
+        storage.set('gui.notes', notesText);
+        notesStatus.textContent = '保存しました';
+        setTimeout(() => notesStatus.textContent = '自動保存オン', 1200);
+      }, 400);
+    });
+
+    // ===== Theme =====
+    function toggleTheme() {
+      document.documentElement.classList.toggle('dark');
+      const isDark = document.documentElement.classList.contains('dark');
+      storage.set('gui.theme', isDark ? 'dark' : 'light');
+    }
+
+    // ===== Export =====
+    function exportData() {
+      const blob = new Blob([JSON.stringify({ todos, notes: notesText }, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = 'gui-sample-data.json';
+      document.body.appendChild(a); a.click(); a.remove();
+      URL.revokeObjectURL(url);
+    }
+
+    // ===== Tabs =====
+    $$('.tab-btn').forEach(btn => btn.addEventListener('click', () => {
+      $$('.tab-btn').forEach(b => b.classList.toggle('active', b === btn));
+      const id = btn.dataset.tab;
+      $$('.tab').forEach(p => p.hidden = true);
+      $('#tab-' + id).hidden = false;
+    }));
+
+    // ===== Events =====
+    addBtn.addEventListener('click', addTodo);
+    titleEl.addEventListener('keydown', (e) => { if (e.key === 'Enter') addTodo(); });
+    searchEl.addEventListener('input', render);
+    filterEl.addEventListener('change', render);
+
+    btnTheme.addEventListener('click', toggleTheme);
+    btnExport.addEventListener('click', exportData);
+
+    btnHelp.addEventListener('click', () => dlgHelp.showModal());
+    dlgHelp.addEventListener('close', () => {});
+
+    // Shortcuts
+    document.addEventListener('keydown', (e) => {
+      const mod = e.metaKey || e.ctrlKey;
+      if (mod && e.key.toLowerCase() === 'k') { e.preventDefault(); searchEl.focus(); }
+      if (mod && e.shiftKey && e.key.toLowerCase() === 'e') { e.preventDefault(); exportData(); }
+      if (mod && e.key.toLowerCase() === 'd') { e.preventDefault(); toggleTheme(); }
+    });
+
+    // ===== Initial Render =====
+    render();
+  </script>
+</body>
+</html>
