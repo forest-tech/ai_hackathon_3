@@ -6,9 +6,11 @@ import scipy.io.wavfile as wav
 
 app = Flask(__name__)
 
+
 @app.route("/")
 def index():
     return send_file("front.html")
+
 
 @app.route("/generate", methods=["GET"])
 def generate():
@@ -19,7 +21,7 @@ def generate():
     rate = 44100  # サンプリングレート
     duration = 2  # 秒
 
-    t = np.linspace(0, duration, int(rate*duration), False)
+    t = np.linspace(0, duration, int(rate * duration), False)
     data = 0.5 * np.sin(2 * np.pi * freq * t)
 
     # 16bit PCM 形式に変換
@@ -30,11 +32,9 @@ def generate():
     buf.seek(0)
 
     return send_file(
-        buf,
-        mimetype="audio/wav",
-        as_attachment=True,
-        download_name="tone.wav"
+        buf, mimetype="audio/wav", as_attachment=True, download_name="tone.wav"
     )
+
 
 if __name__ == "__main__":
     app.run(debug=True)
