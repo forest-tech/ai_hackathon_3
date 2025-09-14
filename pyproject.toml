@@ -6,7 +6,9 @@ readme = "README.md"
 requires-python = ">=3.11.9"
 dependencies = [
     "flask>=3.1.2",
+    "mediapipe>=0.10.14",
     "numpy>=2.3.3",
+    "opencv-python>=4.11.0.86",
     "scipy>=1.16.2",
     "sounddevice>=0.5.2",
 ]
