@@ -1,3 +1,5 @@
 .venv
 tintin.txt
 __pycache__/
+
+VideoPose3D/checkpoint/**/*
